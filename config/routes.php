@@ -2,6 +2,8 @@
 
     declare(strict_types=1);
 
+use Alura\Mvc\Controller\ApiVideoController;
+use Alura\Mvc\Controller\LoginController;
 use Alura\Mvc\Controller\VideoController;
 
     return [
@@ -28,6 +30,27 @@ use Alura\Mvc\Controller\VideoController;
         'GET|/remover-video' => [
             'controller'  => VideoController::class,
             'function'  => 'delete'
+        ],
+        'GET|/login' => [
+            'controller'  => LoginController::class,
+            'function'  => 'index'
+        ],
+        'POST|/login' => [
+            'controller'  => LoginController::class,
+            'function'  => 'login'
+        ],
+        'GET|/logout' => [
+            'controller'  => LoginController::class,
+            'function'  => 'logout'
+        ],
+
+        'GET|/videos-json' => [
+            'controller'  => ApiVideoController::class,
+            'function'  => 'index'
+        ],
+        'POST|/videos' => [
+            'controller'  => ApiVideoController::class,
+            'function'  => 'create'
         ],
     ];
     

@@ -2,6 +2,14 @@
 
     declare(strict_types=1);
 
+    session_start();
+    if (isset($_SESSION['logado'])) {
+        $originalInfo = $_SESSION['logado'];
+        unset($_SESSION['logado']);
+        session_regenerate_id();
+        $_SESSION['logado'] = $originalInfo;
+    }
+
     use Alura\Mvc\Repository\VideoRepository;
 
     require_once __DIR__ . '/../vendor/autoload.php';
@@ -14,6 +22,13 @@
 
     $pathInfo = $_SERVER['PATH_INFO'] ?? '/';
     $httpMethod = $_SERVER['REQUEST_METHOD'];
+
+    $isLoginRoute = $pathInfo === '/login';
+    if((!array_key_exists('logado', $_SESSION) || $_SESSION['logado'] !== true) && !$isLoginRoute){
+        header('Location: /login');
+        return;
+    }
+
     $key = "$httpMethod|$pathInfo";
 
     if(!array_key_exists($key, $routes)){

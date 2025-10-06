@@ -4,18 +4,18 @@ namespace Alura\Mvc\Controller;
 
 use Alura\Mvc\Entity\Video;
 use Alura\Mvc\Repository\VideoRepository;
+use finfo;
 
 class VideoController 
 {
     
     public function __construct(private VideoRepository $repository)
-    {    }
+    {}
 
     public function index(): void
     {
-        
+                
         $videoList = $this->repository->all();
-
         require_once __DIR__ . '/../../views/video-list.php';
 
     }
@@ -46,7 +46,26 @@ class VideoController
         exit();
         }
 
-        $success = $this->repository->add(new Video($url, $titulo));
+        $video = new Video($url, $titulo);
+        if($_FILES['image']['error'] === UPLOAD_ERR_OK){
+            
+            $fileTempName = uniqid('upload_') . pathinfo($_FILES['image']['name'], PATHINFO_BASENAME);
+            $finfo = new finfo(FILEINFO_MIME_TYPE);
+            $mimeType = $finfo->file($_FILES['image']['tmp_name']);
+
+            if(str_starts_with($mimeType, 'image/')){
+                
+                move_uploaded_file(
+                    $_FILES['image']['tmp_name'],
+                    __DIR__ . '/../../public/img/uploads/' . $fileTempName
+                );
+                $video->setFilePath('/img/uploads/' . $fileTempName);
+                
+            }
+
+        }
+
+        $success = $this->repository->add($video);
 
         if ($success === false) {
             header('Location: index.php?sucesso=0');
@@ -77,6 +96,24 @@ class VideoController
         }        
         $video = new Video($url, $titulo);
         $video->setId($id);
+        
+        if($_FILES['image']['error'] === UPLOAD_ERR_OK){
+            
+            $fileTempName = uniqid('upload_') . pathinfo($_FILES['image']['name'], PATHINFO_BASENAME);
+            $finfo = new finfo(FILEINFO_MIME_TYPE);
+            $mimeType = $finfo->file($_FILES['image']['tmp_name']);
+
+            if(str_starts_with($mimeType, 'image/')){
+                
+                move_uploaded_file(
+                    $_FILES['image']['tmp_name'],
+                    __DIR__ . '/../../public/img/uploads/' . $fileTempName
+                );
+                $video->setFilePath('/img/uploads/' . $fileTempName);
+                
+            }
+            
+        }
 
         $success = $this->repository->update($video);
 

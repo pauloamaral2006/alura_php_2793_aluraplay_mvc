@@ -1,4 +1,4 @@
-# MVC
+# MVC e API
 
 ## ℹ️ Sobre
 
@@ -13,6 +13,14 @@
 - Filtrar e validar dados de formulários com PHP
 - Aprender a usar a orientação a objetos para organizar um projeto
 - Entender o padrão Model-View-Controller
+
+### PHP na Web: lidando com segurança e API
+
+- Aprender a realizar autenticação com PHP
+- Realizar autorização usando sessões HTTP com PHP
+- Saiber manipular Upload de arquivos com PHP
+- Aprofundar no conhecimento de segurança com PHP
+- Aprender sobre criação de APIs com PHP
 
 ## 🖥️ Tecnologias
 
