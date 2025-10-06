@@ -1,0 +1,33 @@
+<?php
+
+    declare(strict_types=1);
+
+use Alura\Mvc\Controller\VideoController;
+
+    return [
+        'GET|/' => [
+            'controller'  => VideoController::class,
+            'function'  => 'index'
+        ],
+        'GET|/novo-video' => [
+            'controller'  => VideoController::class,
+            'function'  => 'show'
+        ],
+        'POST|/novo-video' => [
+            'controller'  => VideoController::class,
+            'function'  => 'create'
+        ],
+        'GET|/editar-video' => [
+            'controller'  => VideoController::class,
+            'function'  => 'show'
+        ],
+        'POST|/editar-video' => [
+            'controller'  => VideoController::class,
+            'function'  => 'update'
+        ],
+        'GET|/remover-video' => [
+            'controller'  => VideoController::class,
+            'function'  => 'delete'
+        ],
+    ];
+    
