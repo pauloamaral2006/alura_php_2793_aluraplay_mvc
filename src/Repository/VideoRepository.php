@@ -33,6 +33,8 @@ class VideoRepository
     public function update(Video $video): bool
     { 
 
+        $updateImageSql = '';
+        
         if($video->getFilePath() !== null) $updateImageSql = ', image_path = :image_path ';
         
         $sql = "UPDATE videos SET url = :url, title = :title $updateImageSql WHERE id = :id;";

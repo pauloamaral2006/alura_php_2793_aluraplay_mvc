@@ -3,143 +3,190 @@
 namespace Alura\Mvc\Controller;
 
 use Alura\Mvc\Entity\Video;
+use Alura\Mvc\Helper\FlashMessaTrait;
+use Alura\Mvc\Helper\HtmlRenderTrait;
 use Alura\Mvc\Repository\VideoRepository;
 use finfo;
+use League\Plates\Engine;
+use Nyholm\Psr7\Response;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
 
 class VideoController 
 {
     
-    public function __construct(private VideoRepository $repository)
+    use FlashMessaTrait, HtmlRenderTrait;
+
+    public function __construct(private Engine $templates, private VideoRepository $repository)
     {}
 
-    public function index(): void
+    public function index(ServerRequestInterface $request): ResponseInterface
     {
                 
         $videoList = $this->repository->all();
-        require_once __DIR__ . '/../../views/video-list.php';
+
+        return new Response(
+            200, 
+            body: $this->templates->render(
+                'video-list', 
+                ['videoList' => $videoList]
+            )
+        );
 
     }
     
-    public function show(): void
+    public function show(ServerRequestInterface $request): ResponseInterface
     {
 
-        $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
+        $queryParams = $request->getQueryParams();
+        
+        $id = filter_var($queryParams['id'] ?? null, FILTER_VALIDATE_INT);
         $video = null;
 
         if($id !== false && $id !== NULL) $video = $this->repository->find($id);
-
-        require_once __DIR__ . '/../../views/video-form.php';
-
+        
+        return new Response(
+            200, 
+            body:$this->templates->render(
+                'video-form',
+                ['video' => $video]
+            )
+        );
+        
     }
 
-    public function create(): void
+    public function create(ServerRequestInterface $request): ResponseInterface
     {
 
-        $url = filter_input(INPUT_POST, 'url', FILTER_VALIDATE_URL);
+        $queryParams = $request->getParsedBody();
+        $url = filter_var($queryParams['url'], FILTER_VALIDATE_URL);
         if ($url === false) {
-        header('Location: /index.php?sucesso=0');
-        exit();
+            $this->addErrorMessage('URL inválida.');
+            return new Response(404, [
+                'Location' => '/editar-video'
+            ]);
         }
-        $titulo = filter_input(INPUT_POST, 'titulo');
+        $titulo = filter_var($queryParams['titulo']);
         if ($titulo === false) {
-        header('Location: /index.php?sucesso=0');
-        exit();
-        }
+            $this->addErrorMessage('Título inválido.');
+            return new Response(404, [
+                'Location' => '/editar-video'
+            ]);
+        }      
 
         $video = new Video($url, $titulo);
-        if($_FILES['image']['error'] === UPLOAD_ERR_OK){
-            
-            $fileTempName = uniqid('upload_') . pathinfo($_FILES['image']['name'], PATHINFO_BASENAME);
-            $finfo = new finfo(FILEINFO_MIME_TYPE);
-            $mimeType = $finfo->file($_FILES['image']['tmp_name']);
+        $files = $request->getUploadedFiles();
+        /** @var UploadedFileInterface $uploadedImage */
+        $uploadedImage = $files['image'];
+        if ($uploadedImage->getError() === UPLOAD_ERR_OK) {
+            $finfo = new \finfo(FILEINFO_MIME_TYPE);
+            $tmpFile = $uploadedImage->getStream()->getMetadata('uri');
+            $mimeType = $finfo->file($tmpFile);
 
-            if(str_starts_with($mimeType, 'image/')){
-                
-                move_uploaded_file(
-                    $_FILES['image']['tmp_name'],
-                    __DIR__ . '/../../public/img/uploads/' . $fileTempName
-                );
-                $video->setFilePath('/img/uploads/' . $fileTempName);
-                
+            if (str_starts_with($mimeType, 'image/')) {
+                $safeFileName = uniqid('upload_') . '_' . pathinfo($uploadedImage->getClientFilename(), PATHINFO_BASENAME);
+                $uploadedImage->moveTo(__DIR__ . '/../../public/img/uploads/' . $safeFileName);
+                $video->setFilePath($safeFileName);
             }
-
         }
 
         $success = $this->repository->add($video);
 
         if ($success === false) {
-            header('Location: index.php?sucesso=0');
+            $this->addErrorMessage('Erro ao cadastrar vídeo.');
+            return new Response(404, [
+                'Location' => '/novo-video'
+            ]);
         } else {
-            header('Location: index.php?sucesso=1');
+            return new Response(201, [
+                'Location' => '/'
+            ]);
         }
 
     }
 
-    public function update(): void
+    public function update(ServerRequestInterface $request): ResponseInterface
     {
 
-        $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
-        if($id === false || $id === NULL){
-            header('Location: /index.php?sucesso=0');
-            exit();
+        $queryParams = $request->getParsedBody();  
+        
+        $id = filter_var($request->getQueryParams()['id'] ?? null, FILTER_VALIDATE_INT);
+        if($id === false || $id === NULL){            
+            $this->addErrorMessage('ID inválido.');
+            return new Response(302, [
+                'Location' => '/editar-video'
+            ]);
         }
-
-        $url = filter_input(INPUT_POST, 'url', FILTER_VALIDATE_URL);
-        if($url === false || $url === NULL){
-            header('Location: /index.php?sucesso=0');
-            exit();
+        $url = filter_var($queryParams['url'], FILTER_VALIDATE_URL);
+        if ($url === false) {
+            $this->addErrorMessage('URL inválida.');
+            return new Response(302, [
+                'Location' => '/editar-video'
+            ]);
         }
-        $titulo = filter_input(INPUT_POST, 'titulo');
+        $titulo = filter_var($queryParams['titulo']);
         if ($titulo === false) {
-            header('Location: /index.php?sucesso=0');
-            exit();
-        }        
+            $this->addErrorMessage('Título inválido.');
+            return new Response(302, [
+                'Location' => '/editar-video'
+            ]);
+        }      
         $video = new Video($url, $titulo);
         $video->setId($id);
         
-        if($_FILES['image']['error'] === UPLOAD_ERR_OK){
-            
-            $fileTempName = uniqid('upload_') . pathinfo($_FILES['image']['name'], PATHINFO_BASENAME);
-            $finfo = new finfo(FILEINFO_MIME_TYPE);
-            $mimeType = $finfo->file($_FILES['image']['tmp_name']);
+        $files = $request->getUploadedFiles();
+        /** @var UploadedFileInterface $uploadedImage */
+        $uploadedImage = $files['image'];
+        if ($uploadedImage->getError() === UPLOAD_ERR_OK) {
+            $finfo = new \finfo(FILEINFO_MIME_TYPE);
+            $tmpFile = $uploadedImage->getStream()->getMetadata('uri');
+            $mimeType = $finfo->file($tmpFile);
 
-            if(str_starts_with($mimeType, 'image/')){
-                
-                move_uploaded_file(
-                    $_FILES['image']['tmp_name'],
-                    __DIR__ . '/../../public/img/uploads/' . $fileTempName
-                );
-                $video->setFilePath('/img/uploads/' . $fileTempName);
-                
+            if (str_starts_with($mimeType, 'image/')) {
+                $safeFileName = uniqid('upload_') . '_' . pathinfo($uploadedImage->getClientFilename(), PATHINFO_BASENAME);
+                $uploadedImage->moveTo(__DIR__ . '/../../public/img/uploads/' . $safeFileName);
+                $video->setFilePath($safeFileName);
             }
-            
         }
 
         $success = $this->repository->update($video);
-
+        
         if ($success === false) {
-            header('Location: index.php?sucesso=0');
+            $this->addErrorMessage('Erro ao alterar vídeo.');
+            return new Response(302, [
+                'Location' => '/editar-video'
+            ]);
         } else {
-            header('Location: index.php?sucesso=1');
+            return new Response(302, [
+                'Location' => '/'
+            ]);
         }
 
     }
 
-    public function delete(): void
+    public function delete(ServerRequestInterface $request): ResponseInterface
     {
 
-        $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
+        $queryParams = $request->getQueryParams();
+        $id = filter_var($queryParams['id'], FILTER_VALIDATE_INT);
         if($id === false || $id === NULL){
-            header('Location: /index.php?sucesso=0');
-            exit();
+            $this->addErrorMessage('ID inválido.');
+            return new Response(302, [
+                'Location' => '/'
+            ]);
         }
 
         $success = $this->repository->remove($id);
 
         if ($success === false) {
-            header('Location: index.php?sucesso=0');
+            $this->addErrorMessage('Erro ao remover vídeo.');
+            return new Response(302, [
+                'Location' => '/'
+            ]);
         } else {
-            header('Location: index.php?sucesso=1');
+            return new Response(302, [
+                'Location' => '/'
+            ]);
         }
 
     }

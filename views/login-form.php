@@ -1,9 +1,9 @@
 <?php
 
-    require_once __DIR__ . '/inicio.html';
+    $this->layout('layout');
 
 ?>
-
+fsdfsdfgsdfsfsfsd
 <main class="container">
 
     <form class="container__formulario" method="post">
@@ -25,5 +25,3 @@
     </form>
 
 </main>
-
-<?php require_once __DIR__ . '/fim.html';

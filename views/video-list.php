@@ -1,6 +1,6 @@
 <?php
 
-    require_once __DIR__ . '/inicio.html';
+    $this->layout('layout');
 
 ?>
 
@@ -43,4 +43,3 @@
 
 </ul>
 
-<?php require_once __DIR__ . '/fim.html';

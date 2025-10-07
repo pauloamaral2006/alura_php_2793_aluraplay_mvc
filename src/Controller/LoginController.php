@@ -2,14 +2,22 @@
 
 namespace Alura\Mvc\Controller;
 
+use Alura\Mvc\Helper\FlashMessaTrait;
+use Alura\Mvc\Helper\HtmlRenderTrait;
+use League\Plates\Engine;
+use Nyholm\Psr7\Response;
 use PDO;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
 
-class LoginController 
+class LoginController
 {
     
+    use FlashMessaTrait, HtmlRenderTrait;
+
     private PDO $pdo;
 
-    public function __construct()
+    public function __construct(private Engine $templates)
     {    
          
         $dbPath = __DIR__ . '/../../banco.sqlite';
@@ -17,25 +25,30 @@ class LoginController
 
     }
 
-    public function index(): void
+    public function index(ServerRequestInterface $request): ResponseInterface
     {
 
-        IF($_SESSION['logado'] ?? false === true){
+        iF($_SESSION['logado'] ?? false === true){
 
-            header('Location: /');
-            return;
+            return new Response(302, [
+                'Location' => '/'
+            ]);
 
         }
 
-        require_once __DIR__ . '/../../views/login-form.php';
+        return new Response(
+            200, 
+            body: $this->templates->render('login-form')
+        );
 
     }
 
-    public function login(): void
+    public function login(ServerRequestInterface $request): ResponseInterface
     {
-    
-        $email = filter_input(INPUT_POST, 'email', FILTER_VALIDATE_EMAIL);
-        $password = filter_input(INPUT_POST, 'password');
+
+        $queryParams = $request->getParsedBody();
+        $email = filter_var($queryParams['email'], FILTER_VALIDATE_EMAIL);
+        $password = filter_var($queryParams['password']);
         $sql = 'SELECT * FROM users WHERE email = ?';
         $statement = $this->pdo->prepare($sql);
         $statement->bindValue(1, $email);
@@ -44,33 +57,42 @@ class LoginController
         $userData = $statement->fetch(PDO::FETCH_ASSOC);
         $correctPassword = password_verify($password, $userData['password'] ?? '');
              
-        if($correctPassword){
-                           
-            if(password_needs_rehash($userData['password'] ?? '', PASSWORD_ARGON2I)){
-
-                $statement = $this->pdo->prepare('UPDATE users SET password = ? WHERE email = ?');
-                $statement->bindValue(1, password_hash($password, PASSWORD_ARGON2I));
-                $statement->bindValue(2, $email);
-                $statement->execute();
-
-            }       
-                 
-            $_SESSION['logado'] = true;
-            header('Location: /');
-
-        }else{
-
-            header('Location: /login?success=0');
+        if(!$correctPassword){
+                  
+            $this->addErrorMessage('E-mail ou senha inválidos.');
+            return new Response(302, [
+                'Location' => '/login'
+            ]);
 
         }
+        
+        if(password_needs_rehash($userData['password'] ?? '', PASSWORD_ARGON2I)){
+
+            $statement = $this->pdo->prepare('UPDATE users SET password = ? WHERE email = ?');
+            $statement->bindValue(1, password_hash($password, PASSWORD_ARGON2I));
+            $statement->bindValue(2, $email);
+            $statement->execute();
+
+        }       
+                
+        $_SESSION['logado'] = true;
+        return new Response(302, [
+            'Location' => '/'
+        ]);
 
     }
 
-    public function logout(): void
+    public function logout(ServerRequestInterface $request): ResponseInterface
     {
     
         session_destroy();
-        header('Location: /login?');
+        return new Response(
+            302, 
+            [
+                'Location' => '/login'
+            ]
+        );
+
     }
 
 }

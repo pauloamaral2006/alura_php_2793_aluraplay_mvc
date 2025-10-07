@@ -1,8 +1,14 @@
 <?php 
 
     declare(strict_types=1);
+    
+    use Psr\Container\ContainerInterface;
+    
+    error_reporting(E_ALL);
+    ini_set('display_errors', 1);
 
-    session_start();
+   if (session_status() === PHP_SESSION_NONE) session_start();
+
     if (isset($_SESSION['logado'])) {
         $originalInfo = $_SESSION['logado'];
         unset($_SESSION['logado']);
@@ -10,14 +16,12 @@
         $_SESSION['logado'] = $originalInfo;
     }
 
-    use Alura\Mvc\Repository\VideoRepository;
+    
 
     require_once __DIR__ . '/../vendor/autoload.php';
+    /***@var ContainerInterface */
+    $diCOntainer = require_once __DIR__ . '/../config/dependencies.php';
             
-    $dbPath = __DIR__ . '/../banco.sqlite';
-    $pdo = new PDO("sqlite:$dbPath");    
-    $repository = new VideoRepository($pdo);    
-
     $routes = require_once __DIR__ . '/../config/routes.php';
 
     $pathInfo = $_SERVER['PATH_INFO'] ?? '/';
@@ -38,6 +42,28 @@
 
     $controllerClass = $routes[$key]['controller'] ?? null;
     $controllerMethod = $routes[$key]['function'] ?? null;
-    $controller = new $controllerClass($repository);
+    $controller = $diCOntainer->get($controllerClass);
 
-    $controller->{$controllerMethod}();
+    // Instanciate ANY PSR-17 factory implementations. Here is nyholm/psr7 as an example
+    $psr17Factory = new \Nyholm\Psr7\Factory\Psr17Factory();
+
+    $creator = new \Nyholm\Psr7Server\ServerRequestCreator(
+        $psr17Factory, // ServerRequestFactory
+        $psr17Factory, // UriFactory
+        $psr17Factory, // UploadedFileFactory
+        $psr17Factory  // StreamFactory
+    );
+
+    $request = $creator->fromGlobals();
+
+    $response = $controller->{$controllerMethod}($request);
+
+    http_response_code($response->getStatusCode());
+
+    foreach ($response->getHeaders() as $name => $values) {
+        foreach ($values as $value) {  
+            header (sprintf('%s: %s', $name, $value), false);
+        }
+    }
+
+    echo $response->getBody();

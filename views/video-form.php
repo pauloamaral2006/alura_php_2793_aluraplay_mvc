@@ -1,6 +1,6 @@
 <?php
 
-    require_once __DIR__ . '/inicio.html';
+    $this->layout('layout');
 
 ?>
 
@@ -37,5 +37,3 @@
     </form>
 
 </main>
-
-<?php require_once __DIR__ . '/fim.html';

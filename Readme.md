@@ -22,6 +22,14 @@
 - Aprofundar no conhecimento de segurança com PHP
 - Aprender sobre criação de APIs com PHP
 
+### PHP na Web: aplicando boas práticas e PSRs
+
+- Praticar o conhecimento de Orientação a Objetos
+- Aprender sobre output buffer no PHP
+- Conhecer sobre Traits em PHP
+- Aprender sobre PSRs e o ecossistema PHP
+- Usar uma Template Engine profissional em seu projeto
+
 ## 🖥️ Tecnologias
 
 <div>
